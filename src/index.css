@@ -20,4 +20,171 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--color-contrast-paper);
+}
+
+button {
+  font: inherit;
+}
+
+#main-poster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  grid-auto-rows: 12px;
+  gap: 12px;
+  padding-bottom: 2.5rem;
+}
+
+.poster-card {
+  grid-row: span 24;
+  min-width: 0;
+}
+
+.poster-card--tall {
+  grid-row: span 31;
+}
+
+.poster-card--square {
+  grid-row: span 20;
+}
+
+.poster-card--wide {
+  grid-column: span 2;
+  grid-row: span 19;
+}
+
+.poster-card__button {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-contrast-ink);
+  background: var(--color-contrast-white);
+  cursor: pointer;
+}
+
+.standalone-poster-grid .poster-card {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.standalone-poster-grid .poster-card__button {
+  height: auto;
+  aspect-ratio: 3 / 4;
+}
+
+.poster-art {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  color: var(--poster-accent);
+  background:
+    linear-gradient(135deg, transparent 48%, color-mix(in srgb, var(--poster-accent) 18%, transparent) 49% 58%, transparent 59%),
+    var(--poster-primary);
+  text-align: left;
+  transition: transform 220ms ease;
+}
+
+.poster-card__button:hover .poster-art {
+  transform: scale(1.02);
+}
+
+.poster-art__number {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.poster-art__shape {
+  position: absolute;
+  top: 13%;
+  left: 12%;
+  width: 64%;
+  aspect-ratio: 1;
+  border: clamp(12px, 3vw, 36px) solid var(--poster-secondary);
+  border-radius: 50%;
+  transform: rotate(-12deg);
+  box-shadow: 2.25rem 2.25rem 0 color-mix(in srgb, var(--poster-accent) 68%, transparent);
+}
+
+.poster-card:nth-child(3n) .poster-art__shape {
+  border-radius: 0;
+  transform: rotate(21deg);
+}
+
+.poster-card:nth-child(4n) .poster-art__shape {
+  width: 75%;
+  border-radius: 50% 0 50% 0;
+  transform: rotate(45deg);
+}
+
+.poster-art__title,
+.poster-art__year {
+  position: relative;
+  z-index: 2;
+}
+
+.poster-art__title {
+  max-width: 12ch;
+  font-size: clamp(1.1rem, 3.2vw, 2.5rem);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+}
+
+.poster-art__year {
+  margin-top: 0.65rem;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 640px) {
+  #main-poster-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  #main-poster-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .poster-card--portrait {
+    grid-column: span 2;
+    grid-row: span 31;
+  }
+
+  .poster-card--tall {
+    grid-column: span 2;
+    grid-row: span 39;
+  }
+
+  .poster-card--square {
+    grid-column: span 2;
+    grid-row: span 27;
+  }
+
+  .poster-card--wide {
+    grid-column: span 3;
+    grid-row: span 26;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster-art {
+    transition: none;
+  }
 }
