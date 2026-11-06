@@ -1,83 +1,98 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { FaArrowDownLong } from "react-icons/fa6";
-import { posters } from "../data/posters";
+import { motion, useReducedMotion } from "motion/react";
 import PosterModal from "./PosterModal";
 
-const INITIAL_POSTER_COUNT = 8;
-const LOAD_BATCH_SIZE = 8;
+const INITIAL_POSTER_COUNT = 10;
+const LOAD_BATCH_SIZE = 10;
 
-const POSTER_LAYOUT_CLASSES = {
-	portrait: "[grid-row:span_24] lg:col-span-2 lg:[grid-row:span_31]",
-	tall: "[grid-row:span_31] lg:col-span-2 lg:[grid-row:span_39]",
-	square: "[grid-row:span_20] lg:col-span-2 lg:[grid-row:span_27]",
-	wide: "col-span-2 [grid-row:span_19] lg:col-span-3 lg:[grid-row:span_26]",
-};
+// The source posters share nearly the same portrait ratio, so their natural
+// dimensions produce a uniform grid. These spans recreate the staggered Figma
+// composition while the modal continues to show each full, uncropped image.
+const MOSAIC_ROW_SPANS = [
+	"[grid-row:span_29]",
+	"[grid-row:span_29]",
+	"[grid-row:span_15]",
+	"[grid-row:span_45]",
+	"[grid-row:span_45]",
+	"[grid-row:span_15]",
+	"[grid-row:span_15]",
+	"[grid-row:span_29]",
+	"[grid-row:span_37]",
+	"[grid-row:span_21]",
+	"[grid-row:span_29]",
+	"[grid-row:span_45]",
+];
 
-function getShapeClasses(index) {
-	if ((index + 1) % 4 === 0) {
-		return "w-[75%] rotate-45 rounded-[50%_0_50%_0]";
-	}
-
-	if ((index + 1) % 3 === 0) {
-		return "w-[64%] rotate-[21deg] rounded-none";
-	}
-
-	return "w-[64%] -rotate-12 rounded-full";
-}
-
-function PosterCard({
-	poster,
-	index,
-	posterSet = posters,
-	standalone = false,
-}) {
+function PosterCard({ poster, index, posterSet, standalone = false }) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [primary, secondary, accent] = poster.colors;
-	const layoutClasses = standalone
+	const [isImageReady, setIsImageReady] = useState(false);
+	const shouldReduceMotion = useReducedMotion();
+	const label = `Poster ${String(poster.poster_number).padStart(2, "0")}`;
+	const entranceDelay = shouldReduceMotion
+		? 0
+		: (index % LOAD_BATCH_SIZE) * 0.055;
+	const layoutClass = standalone
 		? "min-w-0"
-		: `min-w-0 ${POSTER_LAYOUT_CLASSES[poster.format]}`;
-	const buttonSizeClasses = standalone ? "h-auto aspect-[3/4]" : "h-full";
+		: `min-w-0 ${MOSAIC_ROW_SPANS[index % MOSAIC_ROW_SPANS.length]}`;
+
+	async function handleImageLoad(event) {
+		const image = event.currentTarget;
+		try {
+			await image.decode();
+		} catch {
+			// A completed load can still be presented if decode() is unavailable.
+		}
+		setIsImageReady(true);
+	}
 
 	return (
 		<>
-			<article className={layoutClasses}>
-				<button
+			<motion.article
+				className={layoutClass}
+				initial={false}
+				animate={
+					isImageReady
+						? { opacity: 1, y: 0, scale: 1 }
+						: {
+								opacity: 0,
+								y: shouldReduceMotion ? 0 : 30,
+								scale: shouldReduceMotion ? 1 : 0.955,
+							}
+				}
+				transition={{
+					default: {
+						type: "spring",
+						stiffness: 210,
+						damping: 19,
+						mass: 0.82,
+						delay: entranceDelay,
+					},
+					opacity: {
+						duration: shouldReduceMotion ? 0.15 : 0.28,
+						delay: entranceDelay,
+					},
+				}}
+			>
+				<motion.button
 					type="button"
 					onClick={() => setIsModalOpen(true)}
-					className={`group w-full cursor-pointer overflow-hidden border border-contrast-ink bg-contrast-white p-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-orange ${buttonSizeClasses}`}
-					aria-label={`View ${poster.title}, ${poster.year}`}
+					whileHover={shouldReduceMotion ? undefined : { scale: 1.012 }}
+					whileTap={shouldReduceMotion ? undefined : { scale: 0.995 }}
+					transition={{ type: "spring", stiffness: 340, damping: 24 }}
+					className={`relative block w-full cursor-zoom-in overflow-hidden border border-contrast-ink bg-contrast-white p-0 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-orange ${standalone ? "aspect-3/4" : "h-full"}`}
+					aria-label={`View ${label}`}
 				>
-					<div
-						className="relative flex h-full flex-col justify-end overflow-hidden p-[clamp(0.75rem,2vw,1.5rem)] text-left transition-transform duration-[220ms] ease-in-out group-hover:scale-[1.02] motion-reduce:transition-none"
-						style={{
-							color: accent,
-							background: `linear-gradient(135deg, transparent 48%, color-mix(in srgb, ${accent} 18%, transparent) 49% 58%, transparent 59%), ${primary}`,
-						}}
-					>
-						<span
-							className="absolute right-3 top-3 z-[2] text-[0.7rem] font-extrabold tracking-[0.12em]"
-							aria-hidden="true"
-						>
-							{String(index + 1).padStart(2, "0")}
-						</span>
-						<span
-							className={`absolute left-[12%] top-[13%] aspect-square border-[clamp(12px,3vw,36px)] ${getShapeClasses(index)}`}
-							style={{
-								borderColor: secondary,
-								boxShadow: `2.25rem 2.25rem 0 color-mix(in srgb, ${accent} 68%, transparent)`,
-							}}
-							aria-hidden="true"
-						/>
-						<span className="relative z-[2] max-w-[12ch] text-[clamp(1.1rem,3.2vw,2.5rem)] font-black uppercase leading-[0.88] tracking-[-0.055em]">
-							{poster.title}
-						</span>
-						<span className="relative z-[2] mt-[0.65rem] text-[0.67rem] font-extrabold uppercase tracking-[0.08em]">
-							Austin · {poster.year}
-						</span>
-					</div>
-				</button>
-			</article>
-
+					<img
+						src={poster.imageUrl}
+						alt={label}
+						loading={index < INITIAL_POSTER_COUNT ? "eager" : "lazy"}
+						onLoad={handleImageLoad}
+						onError={() => setIsImageReady(true)}
+						className="block h-full w-full object-cover"
+					/>
+				</motion.button>
+			</motion.article>
 			{isModalOpen && (
 				<PosterModal
 					initialPoster={poster}
@@ -89,91 +104,101 @@ function PosterCard({
 	);
 }
 
-function PosterGrid() {
-	const [isExpanded, setIsExpanded] = useState(false);
+function PosterGrid({ posters, loading, error, onRetry }) {
 	const [visibleCount, setVisibleCount] = useState(INITIAL_POSTER_COUNT);
-	const loadMoreRef = useRef(null);
-	const collectionRef = useRef(null);
 	const hasMorePosters = visibleCount < posters.length;
 	const visiblePosters = posters.slice(0, visibleCount);
 
 	useEffect(() => {
-		if (!isExpanded || !hasMorePosters || !loadMoreRef.current) return;
+		setVisibleCount(INITIAL_POSTER_COUNT);
+	}, [posters.length]);
 
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (!entry.isIntersecting) return;
-
-				setVisibleCount((currentCount) =>
-					Math.min(currentCount + LOAD_BATCH_SIZE, posters.length),
-				);
-			},
-			{ rootMargin: "500px 0px" },
+	if (loading)
+		return (
+			<div
+				className="border border-contrast-line bg-contrast-white px-6 py-12 text-center"
+				role="status"
+				aria-live="polite"
+			>
+				<p className="text-lg font-black uppercase tracking-tight">
+					Loading the collection
+					<span
+						className="ml-1 inline-flex items-end gap-0.5"
+						aria-hidden="true"
+					>
+						<span className="animate-bounce [animation-delay:-0.3s] motion-reduce:animate-none">
+							.
+						</span>
+						<span className="animate-bounce [animation-delay:-0.15s] motion-reduce:animate-none">
+							.
+						</span>
+						<span className="animate-bounce motion-reduce:animate-none">.</span>
+					</span>
+				</p>
+				<p className="mt-2 text-sm italic text-contrast-muted">
+					still faster than InDesign...
+				</p>
+			</div>
+		);
+	if (error)
+		return (
+			<div className="border border-red-700 bg-red-50 p-6 text-center text-red-900">
+				<p>Could not load the poster archive: {error}</p>
+				<button
+					type="button"
+					onClick={onRetry}
+					className="mt-4 border border-current px-4 py-2 font-bold"
+				>
+					Try again
+				</button>
+			</div>
+		);
+	if (!posters.length)
+		return (
+			<p className="border border-contrast-line bg-contrast-white p-8 text-center text-contrast-muted">
+				The archive is ready for its first poster.
+			</p>
 		);
 
-		observer.observe(loadMoreRef.current);
-
-		return () => observer.disconnect();
-	}, [hasMorePosters, isExpanded, visibleCount]);
-
-	function toggleCollection() {
-		if (isExpanded) {
-			collectionRef.current?.parentElement?.scrollTo({ top: 0 });
-			setVisibleCount(INITIAL_POSTER_COUNT);
-			setIsExpanded(false);
-			return;
-		}
-
-		setIsExpanded(true);
-		setVisibleCount((currentCount) =>
-			Math.min(currentCount + LOAD_BATCH_SIZE, posters.length),
+	function showMorePosters() {
+		setVisibleCount((count) =>
+			Math.min(count + LOAD_BATCH_SIZE, posters.length),
 		);
 	}
 
 	return (
-		<div ref={collectionRef}>
+		<div>
 			<div
 				id="poster-collection-grid"
-				className="relative grid grid-flow-dense grid-cols-2 gap-3 pb-24 [grid-auto-rows:12px] sm:grid-cols-4 sm:gap-4 lg:grid-cols-6"
+				className="grid grid-flow-dense grid-cols-2 gap-3 pb-24 auto-rows-.25 sm:grid-cols-4 sm:gap-4"
 				aria-label="Austin poster collection"
 			>
 				{visiblePosters.map((poster, index) => (
-					<PosterCard key={poster.id} poster={poster} index={index} />
+					<PosterCard
+						key={poster.id}
+						poster={poster}
+						index={index}
+						posterSet={posters}
+					/>
 				))}
 			</div>
-
-			<div className="pointer-events-none sticky bottom-5 z-20 flex justify-center">
-				<button
-					type="button"
-					onClick={toggleCollection}
-					aria-expanded={isExpanded}
-					aria-controls="poster-collection-grid"
-					className="pointer-events-auto inline-flex items-center gap-3 rounded-full bg-contrast-orange px-6 py-3 font-semibold text-contrast-ink shadow-lg transition-colors hover:bg-contrast-orange-hover hover:text-contrast-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-ink"
-				>
-					{isExpanded ? "Collapse collection" : "See full collection"}
-					<FaArrowDownLong
-						className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
-						aria-hidden="true"
-					/>
-				</button>
-			</div>
-
-			{isExpanded && hasMorePosters && (
-				<div
-					ref={loadMoreRef}
-					className="flex min-h-32 items-center justify-center text-sm text-contrast-muted"
-					aria-hidden="true"
-				>
-					Loading more posters…
+			{hasMorePosters ? (
+				<div className="flex justify-center">
+					<button
+						type="button"
+						onClick={showMorePosters}
+						aria-controls="poster-collection-grid"
+						className="inline-flex items-center gap-3 rounded-full bg-contrast-orange px-6 py-3 font-semibold text-contrast-ink shadow-lg transition-colors hover:bg-contrast-orange-hover hover:text-contrast-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-ink"
+					>
+						View more
+						<FaArrowDownLong aria-hidden="true" />
+					</button>
 				</div>
-			)}
-
-			{isExpanded && !hasMorePosters && (
+			) : (
 				<p className="border-t border-contrast-line py-10 text-center text-sm text-contrast-muted">
 					You’ve reached the end of the collection.
 				</p>
 			)}
-
 			<p className="sr-only" aria-live="polite">
 				Showing {visiblePosters.length} of {posters.length} posters.
 			</p>
