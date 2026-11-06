@@ -6,7 +6,7 @@ function ExpandedCollection({ posters, posterCount }) {
 	const visiblePosters = posters.slice(0, posterCount);
 
 	return (
-		<div className="col-span-4 grid grid-cols-1">
+		<div className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2">
 			{visiblePosters.map((poster, index) => (
 				<PosterCard
 					key={poster.id}
@@ -34,10 +34,7 @@ function CollectionCard({
 	};
 	return (
 		<>
-			<div
-				id="collection-card"
-				className="relative col-span-4 text-contrast-white"
-			>
+			<div className="relative font-semibold">
 				<figure>
 					<img
 						className="block aspect-square w-full object-cover"
@@ -45,11 +42,13 @@ function CollectionCard({
 						alt=""
 					/>
 				</figure>
-				<span className="text-6xl absolute top-0 p-2">{title}</span>
+				<span className="absolute top-0 p-2 text-4xl max-w-xs sm:text-6xl">
+					{title}
+				</span>
 				<button
 					type="button"
 					onClick={toggleExpandCollection}
-					className="absolute bottom-0 right-0 bg-contrast-orange hover:bg-contrast-orange-hover transition-all ease-linear m-2 p-4"
+					className="absolute bottom-0 right-0 bg-contrast-orange hover:bg-contrast-orange-hover text-contrast-white transition-all ease-linear m-2 p-4"
 				>
 					{expandCollection ? "Hide Collection" : `${buttonLabel}`}
 				</button>
