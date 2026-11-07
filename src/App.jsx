@@ -3,7 +3,6 @@ import {
 	Suspense,
 	useCallback,
 	useEffect,
-	useRef,
 	useState,
 } from "react";
 import Lenis from "lenis";
@@ -20,34 +19,15 @@ import {
 
 const AdminImport = lazy(() => import("./components/AdminImport"));
 
-function InertialPosterScroller({ children }) {
-	const wrapperRef = useRef(null);
-	const contentRef = useRef(null);
-
-	useEffect(() => {
-		if (!wrapperRef.current || !contentRef.current) return undefined;
-		const lenis = new Lenis({
-			wrapper: wrapperRef.current,
-			content: contentRef.current,
-			autoRaf: true,
-			lerp: 0.09,
-			smoothWheel: true,
-			wheelMultiplier: 0.9,
-			overscroll: true,
-			respectReducedMotion: true,
-		});
-		return () => lenis.destroy();
-	}, []);
-
+function PosterScroller({ children }) {
 	return (
 		<div
-			ref={wrapperRef}
 			data-poster-scroll
 			tabIndex={0}
 			aria-label="Scrollable poster collection"
-			className="max-h-[60vh] overflow-y-auto focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-orange"
+			className="h-dvh overflow-y-auto overscroll-y-auto focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-orange"
 		>
-			<div ref={contentRef}>{children}</div>
+			{children}
 		</div>
 	);
 }
@@ -171,14 +151,14 @@ function App() {
 								Poster collection
 							</h2>
 						</div>
-						<InertialPosterScroller>
+						<PosterScroller>
 							<PosterGrid
 								posters={posters}
 								loading={loading}
 								error={error}
 								onRetry={reload}
 							/>
-						</InertialPosterScroller>
+						</PosterScroller>
 					</section>
 					<section className="px-5 py-6 sm:px-8 lg:px-12 lg:py-10 mt-16">
 						<div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
