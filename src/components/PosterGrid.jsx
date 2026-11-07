@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaArrowDownLong } from "react-icons/fa6";
 import { motion, useReducedMotion } from "motion/react";
 import PosterModal from "./PosterModal";
 
 const INITIAL_POSTER_COUNT = 10;
-const LOAD_BATCH_SIZE = 10;
+const LOAD_BATCH_SIZE = 50;
+const ENTRANCE_STAGGER_COUNT = 10;
 
 // The source posters share nearly the same portrait ratio, so their natural
 // dimensions produce a uniform grid. These spans recreate the staggered Figma
@@ -31,7 +32,7 @@ function PosterCard({ poster, index, posterSet, standalone = false }) {
 	const label = `Poster ${String(poster.poster_number).padStart(2, "0")}`;
 	const entranceDelay = shouldReduceMotion
 		? 0
-		: (index % LOAD_BATCH_SIZE) * 0.055;
+		: (index % ENTRANCE_STAGGER_COUNT) * 0.055;
 	const layoutClass = standalone
 		? "min-w-0"
 		: `min-w-0 ${MOSAIC_ROW_SPANS[index % MOSAIC_ROW_SPANS.length]}`;
@@ -106,12 +107,38 @@ function PosterCard({ poster, index, posterSet, standalone = false }) {
 
 function PosterGrid({ posters, loading, error, onRetry }) {
 	const [visibleCount, setVisibleCount] = useState(INITIAL_POSTER_COUNT);
+	const [isInfiniteScrollEnabled, setIsInfiniteScrollEnabled] = useState(false);
+	const loadMoreRef = useRef(null);
 	const hasMorePosters = visibleCount < posters.length;
 	const visiblePosters = posters.slice(0, visibleCount);
 
 	useEffect(() => {
 		setVisibleCount(INITIAL_POSTER_COUNT);
+		setIsInfiniteScrollEnabled(false);
 	}, [posters.length]);
+
+	useEffect(() => {
+		const loadMoreElement = loadMoreRef.current;
+		if (!isInfiniteScrollEnabled || !hasMorePosters || !loadMoreElement)
+			return undefined;
+
+		const scrollContainer = loadMoreElement.closest("[data-poster-scroll]");
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (!entries[0].isIntersecting) return;
+				setVisibleCount((count) =>
+					Math.min(count + LOAD_BATCH_SIZE, posters.length),
+				);
+			},
+			{
+				root: scrollContainer,
+				rootMargin: "800px 0px",
+			},
+		);
+
+		observer.observe(loadMoreElement);
+		return () => observer.disconnect();
+	}, [hasMorePosters, isInfiniteScrollEnabled, posters.length]);
 
 	if (loading)
 		return (
@@ -160,7 +187,8 @@ function PosterGrid({ posters, loading, error, onRetry }) {
 			</p>
 		);
 
-	function showMorePosters() {
+	function enableInfiniteScroll() {
+		setIsInfiniteScrollEnabled(true);
 		setVisibleCount((count) =>
 			Math.min(count + LOAD_BATCH_SIZE, posters.length),
 		);
@@ -182,17 +210,30 @@ function PosterGrid({ posters, loading, error, onRetry }) {
 					/>
 				))}
 			</div>
-			{hasMorePosters ? (
+			{hasMorePosters && !isInfiniteScrollEnabled ? (
 				<div className="flex justify-center">
 					<button
 						type="button"
-						onClick={showMorePosters}
+						onClick={enableInfiniteScroll}
 						aria-controls="poster-collection-grid"
+						aria-describedby="poster-scroll-description"
 						className="inline-flex items-center gap-3 rounded-full bg-contrast-orange px-6 py-3 font-semibold text-contrast-ink shadow-lg transition-colors hover:bg-contrast-orange-hover hover:text-contrast-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-contrast-ink"
 					>
 						View more
 						<FaArrowDownLong aria-hidden="true" />
 					</button>
+					<p id="poster-scroll-description" className="sr-only">
+						Loads 50 posters at a time as you continue scrolling.
+					</p>
+				</div>
+			) : hasMorePosters ? (
+				<div
+					ref={loadMoreRef}
+					className="flex min-h-24 items-center justify-center text-sm text-contrast-muted"
+					role="status"
+					aria-label="More posters load automatically near the end of the collection"
+				>
+					Keep scrolling for more posters
 				</div>
 			) : (
 				<p className="border-t border-contrast-line py-10 text-center text-sm text-contrast-muted">
